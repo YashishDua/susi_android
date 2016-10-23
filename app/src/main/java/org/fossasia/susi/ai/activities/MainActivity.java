@@ -18,6 +18,7 @@ import android.os.Bundle;
 import android.provider.MediaStore;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
+import android.support.annotation.Nullable;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.Snackbar;
 import android.support.v4.content.ContextCompat;
@@ -28,13 +29,16 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
+import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Base64;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Patterns;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -44,6 +48,7 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -72,6 +77,7 @@ import java.util.regex.Matcher;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import butterknife.Optional;
 import io.realm.Case;
 import io.realm.Realm;
 import io.realm.RealmList;
@@ -81,6 +87,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 import static android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT;
+import static java.security.AccessController.getContext;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -110,11 +117,13 @@ public class MainActivity extends AppCompatActivity {
 
     RealmResults<ChatMessage> chatMessageDatabaseList;
     Boolean micCheck;
+    LinearLayout actionbarLayout;
     private SearchView searchView;
     private Menu menu;
     private int pointer;
     private RealmResults<ChatMessage> results;
     private int offset = 1;
+    private int customMarginActionBar ;
     private ChatFeedRecyclerAdapter recyclerAdapter;
     private Realm realm;
     private TextToSpeech textToSpeech;
@@ -201,6 +210,8 @@ public class MainActivity extends AppCompatActivity {
             throw new IllegalStateException("Not signed in, Cannot access resource!");
         }
         clientBuilder = new ClientBuilder();
+        View v = getLayoutInflater().inflate(R.layout.custom_actionbar,null);
+        actionbarLayout = (LinearLayout)v.findViewById(R.id.custom_actionbar);
         init();
     }
 
@@ -293,6 +304,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void init() {
         ButterKnife.bind(this);
+
+
         realm = Realm.getDefaultInstance();
         registerReceiver(networkStateReceiver, new IntentFilter(android.net.ConnectivityManager.CONNECTIVITY_ACTION));
         networkStateReceiver = new BroadcastReceiver() {
@@ -304,7 +317,22 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "init");
         getSupportActionBar().setDisplayShowHomeEnabled(true);
         getSupportActionBar().setTitle("");
-        getSupportActionBar().setIcon(R.drawable.susi);
+        getSupportActionBar().setDisplayShowCustomEnabled(true);
+
+        //adjusting the margin or alignment
+        DisplayMetrics displaymetrics ;
+        displaymetrics = getApplicationContext().getResources().getDisplayMetrics();
+        int width = displaymetrics.widthPixels;
+        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT);
+
+        customMarginActionBar = width/5 ; //setting left margin taking screen width reference
+        layoutParams.setMargins(customMarginActionBar, 0, 0, 0);
+        actionbarLayout.setLayoutParams(layoutParams);
+        getSupportActionBar().setCustomView(actionbarLayout);
+
+
+
         nonDeliveredMessages.clear();
         RealmResults<ChatMessage> nonDelivered = realm.where(ChatMessage.class).equalTo("isDelivered", false).findAll().sort("id");
         for (ChatMessage each : nonDelivered) {
@@ -769,6 +797,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+
         switch (item.getItemId()) {
             case R.id.action_settings:
                 Intent i = new Intent(this, SettingsActivity.class);
